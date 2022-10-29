@@ -1,0 +1,165 @@
+---
+title: "Evidencia 2"
+author: "Diego Curiel - A01640372 | Santiago Vera - A01641585 | Carlos Palmieri - A01635776 | Carlos Magaña - A01641645"
+output: html_notebook
+---
+
+# Evidencia 2
+
+### Parte 1
+
+Enlace al video:
+
+<https://youtu.be/FbeljTYgx5I>
+
+### Parte 2
+
+En esta evidencia trabajaremos con las secuencias de SARS-CoV-2 reportadas en los 20 países con más casos reportados.
+
+```{r}
+install.packages("adegenet")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("Biostrings")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("DECIPHER")
+if (!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("ggtree")
+```
+
+```{r}
+library('seqinr')
+library('ggplot2')
+library('ggthemes')
+library('tidyverse')
+library('ape')
+library("Biostrings")
+library("DECIPHER")
+library(ggtree)
+```
+
+Para comenzar vamos a crear los archivos FASTA que contienen las secuencias a estudiar:
+```{r}
+virus = c("OW443684","OL989073","OL869974","OL989071",
+          "MT470219","OL989058","ON313826","ON248600",
+          "MZ570430","MT994632","MT955360","LC636486",
+          "MW466799","OL790194","MT705206","MZ047270",
+          "MW199186","OA970733","MT326187","MT192772")
+
+paises = c("Alemania","Argentina","Australia","Brazil",
+           "Colombia","España","Francia","India",
+           "Indonesia","Iran","Italia","Japon",
+           "Corea del Sur","Mexico","Paises bajos","Polonia",
+           "Turquia","Reino Unido","USA","Vietnam")
+
+color = c("#F0C96E","#83F089","#5685F0","#F0629C")
+```
+
+Obtenemos secuencias del GenBank:
+```{r}
+virus_sequences <- read.GenBank(virus)
+str(virus_sequences)
+nombres = names(virus_sequences)
+```
+
+Metemos todas las secuencias a un fasta único:
+```{r}
+secdna = write.dna(virus_sequences,  file ="virus_seqs.fasta", format = "fasta", append =
+FALSE, nbcol = 6, colsep = " ", colw = 10)
+virus_secuencias = read.fasta("virus_seqs.fasta")
+```
+
+A continuación, calcularemos la longitud de las secuencias:
+```{r}
+longes = c()
+for (i in 1:length(virus)){
+  longes = c(longes,length(virus_secuencias[[i]]))
+    
+  print(paises[[i]]);
+  print(length(virus_secuencias[[i]]));
+}
+```
+Podemos observar que la longitud de las secuencias es prácticamente idéntico entre ellas. La menor cuenta con una longitud de 32264 y la mayor con una longitud de 32396.
+
+Ahora graficaremos el número de bases de ADN de las secuencias:
+```{r}
+b=barplot(co,legend = T,col = color,main = "Variantes",names.arg = paises,las=2)
+```
+Al igual que en el apartado anterior, podemos observar que el numero de bases es practicamente el mismo.
+
+Incluimos varias librerias y creamos una secuencia de virus no alineada desde el archivo creado:
+```{r}
+library("seqinr")
+library("ape")
+library("Biostrings")
+virus_seq_not_align <-readDNAStringSet("virus_seqs.fasta", format = "fasta")
+```
+
+Alineamos la secuencia:
+```{r}
+library(DECIPHER)
+virus_seq_not_align <- OrientNucleotides(virus_seq_not_align)
+virus_seq_align <- AlignSeqs(virus_seq_not_align)
+```
+
+Creamos un fasta de la secuencia alineada:
+```{r}
+writeXStringSet(virus_seq_align, file="virus_seq_align.fasta");
+```
+
+Guardamos en una variable dicho acomodo:
+```{r}
+virus_aligned <- read.alignment("virus_seq_align.fasta", format = "fasta");
+```
+
+Creamos una matriz a partir de la secuencia alineada:
+```{r}
+matriz_distancia <- dist.alignment(virus_aligned, matrix = "similarity");
+```
+
+La guardamos como un data frame:
+```{r}
+temp <- as.data.frame(as.matrix(matriz_distancia));
+```
+
+Creamos el árbol con el data frame:
+```{r}
+virus_tree <- nj(matriz_distancia);
+class(virus_tree);
+virus_tree <- ladderize(virus_tree);
+```
+
+Ploteamos el árbol:
+```{r}
+plot(virus_tree, cex = 0.6)
+title("Arbol Filogenetico variantes Sars Cov-2")
+```
+
+Deducimos que estos cambios tan mínimos se deben a que son variantes relativamente cercanas entre ellas, pues a penas se han desarrollado en un lapso menor a 2 años.En la gráfica filogenética todas las variantes son homólogas, y todas las variantes tienen como ancestro comun a MZ047270 y OW443684, ON248600 es ancestro de OL989073 el cual es ancestro de ON313826 y OL869974; MT994632 es ancestro de MT192772 y MT326187; OL989071, OA970733 y LC636486 son ancestros de MW199186 y MZ570430, y estas a su vez son ancestras de OL790194 y MT470219, las cuales a su vez son ancestras de MT705206, MT955360, MW466799 y OL989058.
+
+Tabla de variantes.
+OW443684 - Alemania
+OL989073 - Argentina
+OL869974 - Australia
+OL989071 - Brazil
+MT470219 - Colombia
+OL989058 - España
+ON313826 - Francia
+ON248600 - India
+MZ570430 - Indonesia
+MT994632 - Iran
+MT955360 - Italia
+LC636486 - Japon
+MW466799 - Corea del Sur
+OL790194 - Mexico
+MT705206 - Paises bajos
+MZ047270 - Polonia
+MW199186 - Turquia
+OA970733 - Reino Unido
+MT326187 - USA
+MT192772 - Vietnam
+
+Bibliografía
+NCBI. NCBI. 2022. "NCBI". Recuperado el 07/05/2022 de: https://www.ncbi.nlm.nih.gov
